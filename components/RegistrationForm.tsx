@@ -1,46 +1,116 @@
 import { Picker } from "@react-native-picker/picker";
-import React, { useState } from "react";
+import React, { Component, useState } from "react";
 import { Button, StyleSheet, Text, TextInput, View } from "react-native";
+import { Views } from "../App";
+import { AppStateListener, Optional, UserListener } from "../model/shared-types";
+import { User, UserRole, UserStatus } from "../model/user.model";
 
-export default function RegistrationForm() {
-  const [currency, setCurrency] = useState("Other");
+interface UserInputProps {
+  user: Optional<User>;
+  onCreateUser: UserListener
+  onLoginUser: AppStateListener
+}
+
+interface UserInputState {
+  id: string;
+  firstName: string;
+  lastName: string;
+  username: string;
+  password: string;
+  userRole: UserRole;
+  gender: string;
+  pictureUrl: string;
+  description: string;
+  userStatus: UserStatus;
+  registrationTimespan: string;
+  lastModificationTimespan: string;
+}
+
+export default class RegistrationForm extends Component<UserInputProps, UserInputState> {
+  state: Readonly<UserInputState> = {
+    id: this.props.user?.id?.toString() ||'',
+    firstName: this.props.user?.firstName ||'',
+    lastName: this.props.user?.lastName ||'',
+    username: this.props.user?.username ||'',
+    password: this.props.user?.password ||'',
+    gender: this.props.user?.gender || '',
+    userRole: this.props.user?.userRole ||UserRole.USER,
+    pictureUrl: this.props.user?.pictureUrl || '',
+    description: this.props.user?.description ||'',
+    userStatus: this.props.user?.status || UserStatus.ACTIVE,
+    registrationTimespan: this.props.user?.registrationTimestamp || new Date().toDateString(),
+    lastModificationTimespan: this.props.user?.lastModificationTimestamp || new Date().toDateString()
+}
+
+handleUserSubmit = () => {
+  this.props.onCreateUser(new User(
+      this.state.firstName,
+      this.state.lastName,
+      this.state.username,
+      this.state.password,
+      this.state.gender,
+      this.state.userRole,
+      this.state.pictureUrl,
+      this.state.description,
+      this.state.userStatus,
+      this.state.registrationTimespan,
+      this.state.lastModificationTimespan,
+      this.state.id ? parseInt(this.state.id) : undefined));
+      this.setState({firstName: '', lastName: '', username: '', password: '', gender: '', pictureUrl: '', description: ''})
+}
+
+handleFieldChanged(field: string, text: string) {
+  const stateUpdate = { [field]: text } as unknown as UserInputState;
+  this.setState(stateUpdate);
+}
+
+  handleUserReset = () => {
+      this.setState({firstName: '', lastName: '', username: '', password: '', gender: '', pictureUrl: '', description: ''})
+  }
+
+  handleUserLogin = () => {
+      console.log("Changing State");
+      this.props.onLoginUser(Views.InApp);
+      }
+
+render() {
   return (
-    <View style={styles.container}>
+    <View>
+      <View style={styles.registrationForm}>
       <Text style={styles.titleText}> Registration Form </Text>
-      <View>
-        <TextInput  placeholder="First Name" style={styles.input}/>
-        <TextInput placeholder="Last Name" style={styles.input}/>
-        <TextInput placeholder="UserName" style={styles.input}/>
-        <TextInput secureTextEntry={true} placeholder="Password" style={styles.input}/>
-        <TextInput placeholder="Picture URL" style={styles.input}/>
-        <TextInput placeholder="Description" style={styles.input}/>
+        <TextInput onChangeText={this.handleFieldChanged.bind(this, 'firstName')} value={this.state.firstName} placeholder="First Name" style={styles.input}/>
+        <TextInput onChangeText={this.handleFieldChanged.bind(this, 'lastName')} value={this.state.lastName} placeholder="Last Name" style={styles.input}/>
+        <TextInput onChangeText={this.handleFieldChanged.bind(this, 'username')} value={this.state.username} placeholder="Username" style={styles.input}/>
+        <TextInput onChangeText={this.handleFieldChanged.bind(this, 'password')} value={this.state.password} secureTextEntry={true} placeholder="Password" style={styles.input}/>
+        <TextInput onChangeText={this.handleFieldChanged.bind(this, 'pictureUrl')} value={this.state.pictureUrl} placeholder="Picture URL" style={styles.input}/>
+        <TextInput onChangeText={this.handleFieldChanged.bind(this, 'description')} value={this.state.description} placeholder="Description" style={styles.input}/>
         <Text style={styles.gender}>Gender</Text>
         <View style={{ borderWidth: 1, borderColor: 'red', borderRadius: 4 }}>
         <Picker
-          selectedValue={currency}
-          onValueChange={(currentCurrency) => setCurrency(currentCurrency)}
+          selectedValue={this.state.gender}
+          onValueChange={this.handleFieldChanged.bind(this, 'gender')}
         >
           <Picker.Item label="Male" value="Male" />
           <Picker.Item label="Female" value="Female" />
           <Picker.Item label="Other" value="Other" />
         </Picker>
         </View>
-        <Text>Selected: {currency}</Text>
+        <Text>Selected: {this.state.gender}</Text>
         <View style={styles.buttons}>
         <Button
-          onPress={() => alert("Register button pressed")}
+          onPress={this.handleUserSubmit}
           title="Register"
           color="#841584"
           accessibilityLabel="Submit Register"
         />
         <Button
-          onPress={() => alert("Reset button pressed")}
+          onPress={this.handleUserReset}
           title="Reset"
           color="#842317"
           accessibilityLabel="Reset Form"
         />
         <Button
-          onPress={() => alert("Main button pressed")}
+          onPress={this.handleUserLogin}
           title="Main"
           color="#542867"
           accessibilityLabel="Back to Login form"
@@ -50,13 +120,18 @@ export default function RegistrationForm() {
     </View>
   );
 }
+}
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
+  registrationForm: {
+    width: "85%",
+    backgroundColor: "#B2C8DF",
+    borderRadius: 10,
+    padding: 15,
+    justifyContent: 'center',
     alignItems: "center",
-    justifyContent: "center",
+    paddingHorizontal: 100,
+    marginTop: 50,
   },
   titleText: {
     fontSize: 20,
@@ -64,15 +139,16 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   gender: {
-    fontSize: 10,
-    fontWeight: "200",
+    fontSize: 14,
+    fontWeight: "400",
   },
   input: {
-    height: 40,
-    width: 200,
-    margin: 5,
-    borderWidth: 1,
-    padding: 10,
+    borderColor: "#6E85B7",
+    borderWidth: 2,
+    borderRadius: 5,
+    marginBottom: 5,
+    padding: 5,
+    width: 250,
   },
   buttons: {
     fontSize: 45,
@@ -80,7 +156,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     display: 'flex',
     flexDirection: 'row',
-    justifyContent: 'space-evenly',
+    justifyContent: 'space-between',
     gap: 10,
 },
 });
